@@ -495,7 +495,11 @@ struct PACKED log_ARSP {
     float   test_ratio;
     uint8_t primary;
 };
-
+struct PACKED log_AOA {
+    LOG_PACKET_HEADER;
+    uint64_t time_us;
+    float   aoa;
+};
 struct PACKED log_DMS {
     LOG_PACKET_HEADER;
     uint64_t timestamp;
@@ -641,7 +645,7 @@ struct PACKED log_VER {
     uint32_t iomcu_cpu_id;
 };
 
-
+ 
 // FMT messages define all message formats other than FMT
 // UNIT messages define units which can be referenced by FMTU messages
 // FMTU messages associate types (e.g. centimeters/second/second) to FMT message fields
@@ -1182,9 +1186,11 @@ LOG_STRUCTURE_FROM_CAMERA \
 LOG_STRUCTURE_FROM_MOUNT \
     { LOG_ARSP_MSG, sizeof(log_ARSP), "ARSP",  "QBffcffBBffB", "TimeUS,I,Airspeed,DiffPress,Temp,RawPress,Offset,U,H,Hp,TR,Pri", "s#nPOPP-----", "F-00B00-----", true }, \
     LOG_STRUCTURE_FROM_BATTMONITOR \
+        { LOG_AOA_MSG, sizeof(log_AOA), \
+      "AOA2", "Qf", "TimeUS,aoa", "s-", "F-" }, \
     { LOG_MAG_MSG, sizeof(log_MAG), \
       "MAG", "QBhhhhhhhhhBI",    "TimeUS,I,MagX,MagY,MagZ,OfsX,OfsY,OfsZ,MOX,MOY,MOZ,Health,S", "s#GGGGGGGGG-s", "F-CCCCCCCCC-F", true }, \
-    { LOG_MODE_MSG, sizeof(log_Mode), \
+      { LOG_MODE_MSG, sizeof(log_Mode), \
       "MODE", "QMBB",         "TimeUS,Mode,ModeNum,Rsn", "s---", "F---" }, \
     { LOG_RFND_MSG, sizeof(log_RFND), \
       "RFND", "QBfBBb", "TimeUS,Instance,Dist,Stat,Orient,Quality", "s#m--%", "F-0---", true }, \
@@ -1262,6 +1268,7 @@ LOG_STRUCTURE_FROM_AIS \
     { LOG_MOTBATT_MSG, sizeof(log_MotBatt), \
       "MOTB", "QfffffB",  "TimeUS,LiftMax,BatVolt,ThLimit,ThrAvMx,ThrOut,FailFlags", "s------", "F------" , true }
 
+    
 // message types 0 to 31 reserved for vehicle-specific use
 
 // message types for common messages
@@ -1304,6 +1311,7 @@ enum LogMessages : uint8_t {
     LOG_IDS_FROM_LANDING,
     LOG_MAG_MSG,
     LOG_ARSP_MSG,
+    LOG_AOA_MSG,
     LOG_IDS_FROM_RPM,
     LOG_RFND_MSG,
     LOG_DMS_MSG,

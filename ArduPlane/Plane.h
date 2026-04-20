@@ -174,6 +174,7 @@ public:
     friend class ModeTakeoff;
     friend class ModeThermal;
     friend class ModeLoiterAltQLand;
+    friend class ModeNewMode;
 #if MODE_AUTOLAND_ENABLED
     friend class ModeAutoLand;
 #endif
@@ -186,7 +187,7 @@ public:
 #if AP_PLANE_SYSTEMID_ENABLED
     friend class AP_SystemID;
 #endif
-
+    
     Plane(void);
 
 private:
@@ -339,7 +340,7 @@ private:
 #if HAL_SOARING_ENABLED
     ModeThermal mode_thermal;
 #endif
-
+    ModeNewMode mode_new_mode;
 #if AP_QUICKTUNE_ENABLED
     AP_Quicktune quicktune;
 #endif
@@ -1136,7 +1137,9 @@ private:
     // sensors.cpp
     void read_rangefinder(void);
 #endif
-
+    void read_angle(void);
+    void uart_test(void);
+    void log_angacc(void);    
     // system.cpp
     __INITFUNC__ void init_ardupilot() override;
     bool set_mode(Mode& new_mode, const ModeReason reason);

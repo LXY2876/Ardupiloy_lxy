@@ -238,7 +238,7 @@ float Plane::liftCoeff(float alpha) const
     const float M = coefficient.mcoeff;
     const float c_lift_0 = coefficient.c_lift_0;
     const float c_lift_a0 = coefficient.c_lift_a;
-
+     
     // clamp the value of alpha to avoid exp(90) in calculation of sigmoid
     const float max_alpha_delta = 0.8f;
     if (alpha-alpha0 > max_alpha_delta) {

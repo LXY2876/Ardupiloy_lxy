@@ -783,6 +783,7 @@ bool AP_DDS_Client::start(void)
 void AP_DDS_Client::on_topic_trampoline(uxrSession* uxr_session, uxrObjectId object_id, uint16_t request_id, uxrStreamId stream_id, struct ucdrBuffer* ub, uint16_t length,
                                         void* args)
 {
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO,"DDS_main_loop");  
     AP_DDS_Client *dds = (AP_DDS_Client *)args;
     dds->on_topic(uxr_session, object_id, request_id, stream_id, ub, length);
 }
@@ -806,7 +807,7 @@ void AP_DDS_Client::on_topic(uxrSession* uxr_session, uxrObjectId object_id, uin
         if (success == false) {
             break;
         }
-
+        
         if (rx_joy_topic.axes_size >= 4) {
             const uint32_t t_now = AP_HAL::millis();
 
@@ -822,6 +823,7 @@ void AP_DDS_Client::on_topic(uxrSession* uxr_session, uxrObjectId object_id, uin
                                                              rx_joy_topic.axes[i],
                                                              -1.0, 1.0));
                     RC_Channels::set_override(i, mapped_data, t_now);
+                    // GCS_SEND_TEXT(MAV_SEVERITY_INFO,"override_channel=%d,v=%f\n",i,rx_joy_topic.axes[i]);  
                 }
             }
 
@@ -849,11 +851,14 @@ void AP_DDS_Client::on_topic(uxrSession* uxr_session, uxrObjectId object_id, uin
 #endif // AP_DDS_DYNAMIC_TF_SUB_ENABLED
 #if AP_DDS_VEL_CTRL_ENABLED
     case topics[to_underlying(TopicIndex::VELOCITY_CONTROL_SUB)].dr_id.id: {
+        
         const bool success = geometry_msgs_msg_TwistStamped_deserialize_topic(ub, &rx_velocity_control_topic);
         if (success == false) {
             break;
         }
+        
 #if AP_EXTERNAL_CONTROL_ENABLED
+        
         if (!AP_DDS_External_Control::handle_velocity_control(rx_velocity_control_topic)) {
             // TODO #23430 handle velocity control failure through rosout, throttled.
         }
@@ -1223,7 +1228,7 @@ void AP_DDS_Client::main_loop(void)
     if (!init_transport()) {
         return;
     }
-
+    
     //! @todo check for request to stop task
     while (true) {
         if (comm == nullptr) {

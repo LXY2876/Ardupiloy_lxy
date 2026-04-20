@@ -334,6 +334,14 @@ class VehicleInfo(object):
                 "waf_target": "bin/arduplane",
                 "default_params_filename": ["models/plane.parm", "default_params/plane-vtail.parm"],
             },
+            "plane-myplane": {
+                "waf_target": "bin/arduplane",
+                "default_params_filename": ["models/plane.parm", "default_params/plane-myplane.parm"],
+            },
+            "plane-jetcontrol": {
+                "waf_target": "bin/arduplane",
+                "default_params_filename": ["models/plane.parm", "default_params/plane-jetcontrol.parm"],
+            },
             "plane-tailsitter": {
                 "waf_target": "bin/arduplane",
                 "default_params_filename": "default_params/plane-tailsitter.parm",

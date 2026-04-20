@@ -3,7 +3,7 @@
 
 #include <AP_Math/AP_Math.h>
 #include "AC_PID.h"
-
+#include <GCS_MAVLink/GCS.h>
 #define AC_PID_DEFAULT_NOTCH_ATTENUATION 40
 
 const AP_Param::GroupInfo AC_PID::var_info[] = {
@@ -199,7 +199,7 @@ float AC_PID::update_all(float target, float measurement, float dt, bool limit, 
     if (!isfinite(target) || !isfinite(measurement)) {
         return 0.0f;
     }
-
+     
     // Flag used for logging to indicate a filter reset occurred
     _pid_info.reset = _flags._reset_filter;
     // Reset filters to match the current input (first sample or after reset)
@@ -240,7 +240,7 @@ float AC_PID::update_all(float target, float measurement, float dt, bool limit, 
 #endif
         // Apply first-order low-pass filter to target value
         _target += get_filt_T_alpha(dt) * (target - _target);
-
+        // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Best number ever: %f,dt:%f", get_filt_T_alpha(dt),dt ); 
         // Calculate error and apply error filter
         const float error_last = _error;
         float error = _target - measurement;
@@ -332,6 +332,7 @@ float AC_PID::update_error(float error, float dt, bool limit)
 // If `limit` is true, the integrator is only allowed to shrink to avoid wind-up.
 void AC_PID::update_i(float dt, bool limit)
 {
+     
     if (!is_zero(_ki) && is_positive(dt)) {
         // Allow integrator growth only if not limited, or if error opposes the integrator direction
         if (!limit || ((is_positive(_integrator) && is_negative(_error)) || (is_negative(_integrator) && is_positive(_error)))) {

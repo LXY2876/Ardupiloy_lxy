@@ -57,7 +57,7 @@ void GCS_Plane::update_vehicle_sensor_status_flags(void)
             attitude_stabilized = true;
         }
         break;
-
+    case Mode::Number::NEW_MODE:
     case Mode::Number::AUTO:
     case Mode::Number::RTL:
     case Mode::Number::LOITER:

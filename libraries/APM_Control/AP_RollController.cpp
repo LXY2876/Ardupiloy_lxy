@@ -197,11 +197,11 @@ float AP_RollController::get_servo_out(int32_t angle_err, float scaler, bool dis
     if (gains.tau < 0.05f) {
         gains.tau.set(0.05f);
     }
-
+    
     // Calculate the desired roll rate (deg/sec) from the angle error
     angle_err_deg = angle_err * 0.01;
     float desired_rate = angle_err_deg/ gains.tau;
-
+  
     /*
       prevent indecision in the roll controller when target roll is
       close to 180 degrees from the current roll

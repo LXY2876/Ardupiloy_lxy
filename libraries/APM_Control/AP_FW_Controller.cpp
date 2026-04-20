@@ -43,6 +43,7 @@ float AP_FW_Controller::_get_rate_out(float desired_rate, float scaler, bool dis
     const float old_I = rate_pid.get_i();
 
     const bool underspeed = is_underspeed(aspeed);
+    // const bool underspeed = false;
     if (underspeed) {
         limit_I = true;
     }
@@ -53,7 +54,7 @@ float AP_FW_Controller::_get_rate_out(float desired_rate, float scaler, bool dis
     // note that we run AC_PID in radians so that the normal scaling
     // range for IMAX in AC_PID applies (usually an IMAX value less than 1.0)
     rate_pid.update_all(radians(desired_rate) * scaler * scaler, rate * scaler * scaler, dt, limit_I);
-
+    
     if (underspeed) {
         // when underspeed we lock the integrator
         rate_pid.set_integrator(old_I);
@@ -86,11 +87,12 @@ float AP_FW_Controller::_get_rate_out(float desired_rate, float scaler, bool dis
 
     // sum components
     float out = pinfo.FF + pinfo.P + pinfo.I + pinfo.D + pinfo.DFF;
-    if (ground_mode) {
+    if (ground_mode) { 
         // when on ground suppress D and half P term to prevent oscillations
         out -= pinfo.D + 0.5*pinfo.P;
+         
     }
-
+    // GCS_SEND_TEXT(MAV_SEVERITY_INFO,"P=%f,I=%f,D=%F,DFF=%f",pinfo.P,pinfo.I,pinfo.D,pinfo.DFF);  
     // remember the last output to trigger the I limit
     _last_out = out;
 
@@ -98,7 +100,7 @@ float AP_FW_Controller::_get_rate_out(float desired_rate, float scaler, bool dis
         // let autotune have a go at the values
         autotune->update(pinfo, scaler, angle_err_deg);
     }
-
+    // GCS_SEND_TEXT(MAV_SEVERITY_INFO,"out=%f",out);  
     // output is scaled to notional centidegrees of deflection
     return constrain_float(out * 100, -4500, 4500);
 }

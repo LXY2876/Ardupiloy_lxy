@@ -13,7 +13,7 @@ const AP_Param::Info Plane::var_info[] = {
     // @Description: This value is incremented when changes are made to the eeprom format
     // @User: Advanced
     GSCALAR(format_version,         "FORMAT_VERSION", 0),
-
+    
     // SYSID_THISMAV was here
 
     // SYSID_MYGCS was here
@@ -851,7 +851,9 @@ const AP_Param::Info Plane::var_info[] = {
     // @Group: COMPASS_
     // @Path: ../libraries/AP_Compass/AP_Compass.cpp
     GOBJECT(compass,                "COMPASS_",     Compass),
-
+   // @Group: NEMD_
+    // @Path: mode_newmode.cpp
+    GOBJECT(mode_new_mode,           "NEMD_",     ModeNewMode),
     // @Group: SCHED_
     // @Path: ../libraries/AP_Scheduler/AP_Scheduler.cpp
     GOBJECT(scheduler, "SCHED_", AP_Scheduler),

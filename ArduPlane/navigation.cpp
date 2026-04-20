@@ -276,6 +276,7 @@ void Plane::calc_airspeed_errors()
 
     // use the TECS view of the target airspeed for reporting, to take
     // account of the landing speed
+    // hal.console->printf("target_speed=%f\n", TECS_controller.get_target_airspeed());
     airspeed_error = TECS_controller.get_target_airspeed() - airspeed_measured;
 }
 

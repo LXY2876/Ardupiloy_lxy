@@ -5,7 +5,7 @@
 #include "AP_DDS_ExternalControl.h"
 #include "AP_DDS_Frames.h"
 #include <AP_AHRS/AP_AHRS.h>
-
+#include <GCS_MAVLink/GCS.h>
 #include <AP_ExternalControl/AP_ExternalControl.h>
 
 bool AP_DDS_External_Control::handle_global_position_control(ardupilot_msgs_msg_GlobalPosition& cmd_pos)
@@ -14,7 +14,6 @@ bool AP_DDS_External_Control::handle_global_position_control(ardupilot_msgs_msg_
     if (external_control == nullptr) {
         return false;
     }
-
     if (strcmp(cmd_pos.header.frame_id, MAP_FRAME) == 0) {
         // Narrow the altitude
         const int32_t alt_cm  = static_cast<int32_t>(cmd_pos.altitude * 100);
@@ -46,11 +45,20 @@ bool AP_DDS_External_Control::handle_global_position_control(ardupilot_msgs_msg_
 
 bool AP_DDS_External_Control::handle_velocity_control(geometry_msgs_msg_TwistStamped& cmd_vel)
 {
+    // GCS_SEND_TEXT(MAV_SEVERITY_INFO,"DDS_main_loop");  
     auto *external_control = AP::externalcontrol();
     if (external_control == nullptr) {
         return false;
     }
-
+    Vector3f pose{
+    float(cmd_vel.twist.angular.x),
+    float(cmd_vel.twist.angular.y),
+    float(cmd_vel.twist.angular.z)
+        };
+    if (!external_control->set_attitude(pose)){
+        return false;
+    }
+    
     if (strcmp(cmd_vel.header.frame_id, BASE_LINK_FRAME_ID) == 0) {
         // Convert commands from body frame (x-forward, y-left, z-up) to NED.
         Vector3f linear_velocity;
@@ -58,14 +66,15 @@ bool AP_DDS_External_Control::handle_velocity_control(geometry_msgs_msg_TwistSta
             float(cmd_vel.twist.linear.x),
             float(cmd_vel.twist.linear.y),
             float(-cmd_vel.twist.linear.z) };
-
+              
         if (isnan(linear_velocity_base_link.y) && isnan(linear_velocity_base_link.z)) {
+            
             // Assume it's an airspeed command so ignore the angular data.
             // While MAV_CMD_GUIDED_CHANGE_SPEED supports commands of ground speed and airspeed,
             // ROS users likely care more about airspeed control for a low level velocity control interface like this.
             return external_control->set_airspeed(linear_velocity_base_link.x);
         }
-
+        
         const float yaw_rate = -cmd_vel.twist.angular.z;
 
         auto &ahrs = AP::ahrs();

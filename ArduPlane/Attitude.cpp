@@ -127,6 +127,7 @@ void Plane::stabilize_roll()
 float Plane::stabilize_roll_get_roll_out()
 {
     const float speed_scaler = get_speed_scaler();
+    
 #if HAL_QUADPLANE_ENABLED
     if (!quadplane.use_fw_attitude_controllers()) {
         // use the VTOL rate for control, to ensure consistency
@@ -154,6 +155,7 @@ float Plane::stabilize_roll_get_roll_out()
     if (control_mode == &mode_stabilize && channel_roll->get_control_in() != 0) {
         disable_integrator = true;
     }
+    // printf("fliter=%f",rollController.tau().get());
     return rollController.get_servo_out(nav_roll_cd - ahrs.roll_sensor, speed_scaler, disable_integrator,
                                         ground_mode && !(plane.flight_option_enabled(FlightOptions::DISABLE_GROUND_PID_SUPPRESSION)));
 }
@@ -444,7 +446,7 @@ void Plane::stabilize()
         rollController.reset_I();
         pitchController.reset_I();
         yawController.reset_I();
-
+          
         // if moving very slowly also zero the steering integrator
         if (ahrs.groundspeed() < 1) {
             steerController.reset_I();            

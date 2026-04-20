@@ -12,7 +12,8 @@
 #include "config.h"
 #include "pullup.h"
 #include "systemid.h"
-
+#include <Filter/LowPassFilter2p.h>
+#include <Filter/LowPassFilter.h>
 #ifndef AP_QUICKTUNE_ENABLED
 #define AP_QUICKTUNE_ENABLED HAL_QUADPLANE_ENABLED
 #endif
@@ -22,7 +23,7 @@
 #endif
 
 #include <AP_Quicktune/AP_Quicktune.h>
-
+#include "LMS_filter.h"
 class AC_PosControl;
 class AC_AttitudeControl_Multi;
 class AC_Loiter;
@@ -70,7 +71,7 @@ public:
 #if MODE_AUTOLAND_ENABLED
         AUTOLAND      = 26,
 #endif
-
+        NEW_MODE      = 27,  // your new flight mode    
     // Mode number 30 reserved for "offboard" for external/lua control.
     };
 
@@ -193,7 +194,7 @@ protected:
 
     // makes the initialiser list in the constructor manageable
     uint8_t unused_integer;
-
+    uint16_t start_test;
 #if HAL_QUADPLANE_ENABLED
     // References for convenience, used by QModes
     AC_PosControl*& pos_control;
@@ -1037,3 +1038,77 @@ protected:
 };
 
 #endif
+class ModeNewMode  : public Mode
+{
+public:
+    ModeNewMode(){
+        AP_Param::setup_object_defaults(this, var_info);
+        // if(!cofficient.inverse(cofficient_inverse)){
+        //     GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Newmode_init_error");
+        // };
+    }
+    Number mode_number() const override { return Number::NEW_MODE; }
+    const char *name() const override { return "NEWMODE"; }
+    const char *name4() const override { return "NEWM"; }
+         
+    // methods that affect movement of the vehicle in this mode
+    void update() override;
+
+    void run() override;
+
+#if MODE_AUTOLAND_ENABLED   
+    // true if mode allows landing direction to be set on first takeoff after arm in this mode 
+    bool allows_autoland_direction_capture() const override { return true; }
+#endif
+
+    Vector3f _gyro_prev;
+    Vector3f delta_u;
+    // Vector3f rate_gain{7.0,7.0,7.0};
+    AP_Float angle_P_gain;
+    AP_Int8 LMS_enable;
+    AP_Float rate_gain;
+    AP_Float C_l_delta_a;
+    AP_Float Ixx;
+    float Iyy=1.0f;
+    float Izz=1.0f;
+    // float roll_out_cmd=0.0;
+    // float delta_roll_out=0.0;
+    float roll_out_real=0.0;
+    float roll_out_flt=0.0;
+    float roll_out_flt_last=0.0;
+    AP_Float S_wing;
+    AP_Float b;
+    AP_Float sigma;
+    AP_Float max_increment;
+    AP_Float lms_cutoff_freq;
+    AP_Int8 auto_flap;
+    AP_Float cutoff_frequency;
+    Vector3f output;
+    Vector3f output1;
+    LMS lms_filter;
+    LowPassFilter2pFloat _roll_output_filter{50,18};
+    LowPassFilter2pVector3f _ang_acc_filter{50,18};
+    
+    LowPassFilter2pFloat ARSP_filter{50,18};
+    LowPassFilter2pFloat _roll_output_post_filter{50,23};
+  
+    void log_write_ang_acc(Vector3f vec1,Vector3f vec2);    
+    static const struct AP_Param::GroupInfo var_info[];
+protected:
+    bool _enter() override;
+private:
+    float val=0;
+    float _phi_feedback=0;
+    float _actuator_alpha=0.67;
+    float _actuator_state=0.0;
+    uint8_t _delay_samples=2;        // 延迟对应的采样点数（离散化）
+    float _cmd_buffer[1]={0};
+    float _real_buffer[1]={0};
+    uint8_t _buf_cmd_idx=0;                            // 写指针
+    uint8_t _buf_real_idx=0;                             // 读指针
+    float update_actuator_dynamics(float cmd_norm);
+    // float get_delayed_value(float cmd_current);
+    void stabilize_stick_mixing_direct();
+    
+    
+};

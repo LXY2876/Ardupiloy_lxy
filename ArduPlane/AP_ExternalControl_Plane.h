@@ -21,7 +21,7 @@ public:
         Sets the target airspeed.
     */
     bool set_airspeed(const float airspeed) override WARN_IF_UNUSED;
-
+    bool set_attitude(const Vector3f &attitude) override WARN_IF_UNUSED;
 };
 
 #endif // AP_EXTERNAL_CONTROL_ENABLED

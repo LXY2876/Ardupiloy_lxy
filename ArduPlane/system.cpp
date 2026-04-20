@@ -341,7 +341,8 @@ bool Plane::set_mode(const uint8_t new_mode, const ModeReason reason)
 }
 
 bool Plane::set_mode_by_number(const Mode::Number new_mode_number, const ModeReason reason)
-{
+{   
+    // printf("change to mode %d", new_mode_number);
     Mode *new_mode = plane.mode_from_mode_num(new_mode_number);
     if (new_mode == nullptr) {
         notify_no_such_mode(new_mode_number);

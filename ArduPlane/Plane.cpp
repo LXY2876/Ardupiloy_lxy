@@ -89,6 +89,8 @@ const AP_Scheduler::Task Plane::scheduler_tasks[] = {
     SCHED_TASK_CLASS(AP_BattMonitor, &plane.battery, read,   10, 300,  66),
 #if AP_RANGEFINDER_ENABLED
     SCHED_TASK(read_rangefinder,       50,    100, 78),
+    // SCHED_TASK(log_angacc,       50,    10, 79),
+    
 #endif
 #if AP_ICENGINE_ENABLED
     SCHED_TASK_CLASS(AP_ICEngine,      &plane.g2.ice_control, update,     10, 100,  81),
@@ -119,6 +121,7 @@ const AP_Scheduler::Task Plane::scheduler_tasks[] = {
     SCHED_TASK(update_logging10,        10,    300, 120),
     SCHED_TASK(update_logging25,        25,    300, 123),
 #endif
+    // SCHED_TASK(uart_test, 10, 400, 125),
 #if HAL_SOARING_ENABLED
     SCHED_TASK(update_soaring,         50,    400, 126),
 #endif
@@ -147,6 +150,7 @@ const AP_Scheduler::Task Plane::scheduler_tasks[] = {
 #if AP_QUICKTUNE_ENABLED
     SCHED_TASK(update_quicktune, 40, 100, 163),
 #endif
+    // SCHED_TASK(read_angle, 1, 500, 165),
 };
 
 void Plane::get_scheduler_tasks(const AP_Scheduler::Task *&tasks,
@@ -163,6 +167,83 @@ constexpr int8_t Plane::_failsafe_priorities[7];
 #else
 constexpr int8_t Plane::_failsafe_priorities[6];
 #endif
+
+void Plane::read_angle(){
+    uint8_t test_data[] = {0xff, 0xff,0x01,0x04,0x02, 0x38, 0x02,0xBE};
+    uint8_t return_data[8];
+    hal.serial(5)->write(test_data, sizeof(test_data));
+    if (hal.serial(5)->available()>8){
+        hal.serial(5)->read(return_data, sizeof(return_data));
+
+        uint16_t now_angle= return_data[5]*256+return_data[6];
+        AP::logger().Write("ANGE", "TimeUS,ANGE", "QH",
+                                    AP_HAL::micros64(),
+                                    now_angle);
+    //     GCS_SEND_TEXT(MAV_SEVERITY_INFO,"begin");
+    //     for (int i=0;i<8;i++)
+    //         GCS_SEND_TEXT(MAV_SEVERITY_INFO,"now_angle=%x",return_data[i]);
+    //     GCS_SEND_TEXT(MAV_SEVERITY_INFO,"end");
+        
+}
+}
+
+void Plane::uart_test(){
+    //以下为uart功能测试代码 https://data.johorobot.com/index.php/uartzxdjxyzl.html
+    //写角度测试
+    static bool uart_initialized = false;
+    float angle_percent=0;
+    
+    if (!uart_initialized) {
+        hal.serial(5)->begin(115200);
+        uart_initialized = true;
+    }
+    if (channel_flap != nullptr && rc().has_valid_input()) {
+        if (plane.mode_new_mode.auto_flap==1){
+            float aspeed;
+            if(!ahrs.airspeed_estimate(aspeed)){
+                 aspeed=plane.airspeed.get_airspeed();
+                //  GCS_SEND_TEXT(MAV_SEVERITY_INFO,"aspeed=%f",aspeed);   
+            }
+            float range=MAX(g.flap_2_speed-g.flap_1_speed,12);
+            if (aspeed<g.flap_1_speed){
+            angle_percent=   1.0*g.flap_1_percent/100*aspeed/g.flap_1_speed;
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO,"angle_percent=%f,flap_1_speed=%d,airspeed=%f",angle_percent,(uint8_t)g.flap_1_speed,aspeed);
+            }else{
+                angle_percent=  1.0*g.flap_1_percent/100*(g.flap_2_speed-aspeed)/range+g.flap_2_percent/100*(aspeed-g.flap_1_speed)/range;
+            }
+            angle_percent=constrain_float(angle_percent,0,1);
+             
+        }else{
+            angle_percent= rc().channel(6)->norm_input();
+        }
+        // GCS_SEND_TEXT(MAV_SEVERITY_INFO,"channel7=%f",angle_percent);
+        uint8_t test_data[] = {0xff, 0xff,0x01,0x07,0x03,0x2A,0x0A,0x00,0x00,0x00,0xC0};
+        uint16_t angle_byte=2048-800*angle_percent;
+        angle_byte=constrain_int16(angle_byte,1248,2048);
+        test_data[6]=(angle_byte >> 8) & 0xFF; 
+        test_data[7]=angle_byte & 0xFF;
+        test_data[10]=~(53+test_data[6]+test_data[7])& 0xFF;
+        hal.serial(5)->write(test_data, sizeof(test_data));
+    }
+}
+    //以下为GPIO功能测试代码
+     
+    // hal.gpio->pinMode(61, HAL_GPIO_INPUT);
+    // hal.gpio->pinMode(60, HAL_GPIO_INPUT);
+    // uint8_t gpio_state = hal.gpio->read(60);
+    
+    // GCS_SEND_TEXT(MAV_SEVERITY_INFO,"gpio60_state=%d",gpio_state);
+    // gpio_state = hal.gpio->read(61);
+    // GCS_SEND_TEXT(MAV_SEVERITY_INFO,"gpio61_state=%d",gpio_state);
+ 
+// void Plane::log_angacc(){
+    
+//     // plane.mode_new_mode.log_write_ang_acc(ahrs.get_gyro_latest());
+//     // AP::logger().Write("BAR1", "TimeUS,WATR", "Qf",
+//     //                                     AP_HAL::micros64(),
+//     //                                     barometer.get_pressure(0));
+          
+// }
 
 // update AHRS system
 void Plane::ahrs_update()
@@ -191,7 +272,7 @@ void Plane::ahrs_update()
         roll_limit_cd *= ahrs.cos_pitch();
         pitch_limit_min *= fabsf(ahrs.cos_roll());
     }
-
+     
     // updated the summed gyro used for ground steering and
     // auto-takeoff. Dot product of DCM.c with gyro vector gives earth
     // frame yaw rate
@@ -230,7 +311,7 @@ void Plane::update_speed_height(void)
         should_run_tecs = false;
     }
 #endif
-
+    
     if (auto_state.idle_mode) {
         should_run_tecs = false;
     }
@@ -316,7 +397,7 @@ void Plane::update_logging25(void)
 
     if (should_log(MASK_LOG_RC))
         Log_Write_RC();
-
+    // plane.mode_new_mode.log_write_ang_acc(ahrs.get_gyro_latest(),Vector3f(1,1,1));
     if (should_log(MASK_LOG_IMU))
         AP::ins().Write_Vibration();
 }
@@ -638,7 +719,7 @@ void Plane::update_alt()
 #endif
     
     if (should_run_tecs && !throttle_suppressed) {
-
+        // printf("should_run_tecs");
         float distance_beyond_land_wp = 0;
         if (flight_stage == AP_FixedWing::FlightStage::LAND &&
             current_loc.past_interval_finish_line(prev_WP_loc, next_WP_loc)) {

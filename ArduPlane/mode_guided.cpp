@@ -124,9 +124,10 @@ bool ModeGuided::handle_change_airspeed(const float airspeed, const float accele
 {
     // reject airspeeds that are outside of the tuning envelope
     if (airspeed > plane.aparm.airspeed_max || airspeed < plane.aparm.airspeed_min) {
+        
         return false;
     }
-
+    
     // no need to process any new packet/s with the
     // same airspeed any further, if we are already doing it.
     float new_target_airspeed_cm = airspeed * 100;
@@ -135,7 +136,7 @@ bool ModeGuided::handle_change_airspeed(const float airspeed, const float accele
     }
     plane.guided_state.target_airspeed_cm = new_target_airspeed_cm;
     plane.guided_state.target_airspeed_time_ms = AP_HAL::millis();
-
+    
     if (is_zero(acceleration)) {
         // the user wanted /maximum acceleration, pick a large value as close enough
         plane.guided_state.target_airspeed_accel = 1000.0f;
@@ -160,10 +161,12 @@ void ModeGuided::set_radius_and_direction(const float radius, const bool directi
 
 void ModeGuided::update_target_altitude()
 {
+        
 #if AP_PLANE_OFFBOARD_GUIDED_SLEW_ENABLED
     // target altitude can be negative (e.g. flying below home altitude from the top of a mountain)
     if (((plane.guided_state.target_alt_time_ms != 0) || plane.guided_state.target_location.alt != -1 )) { // target_alt now defaults to -1, and _time_ms defaults to zero.
         // offboard altitude demanded
+        // hal.console->printf("target_alt_rate=%f\n", plane.guided_state.target_alt_rate);
         uint32_t now = AP_HAL::millis();
         float delta = 1e-3f * (now - plane.guided_state.target_alt_time_ms);
         plane.guided_state.target_alt_time_ms = now;
@@ -187,6 +190,7 @@ void ModeGuided::update_target_altitude()
     } else 
 #endif // AP_PLANE_OFFBOARD_GUIDED_SLEW_ENABLED
         {
+       
         Mode::update_target_altitude();
     }
 }

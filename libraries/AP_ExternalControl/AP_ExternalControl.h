@@ -32,7 +32,9 @@ public:
     virtual bool set_linear_velocity_and_yaw_rate(const Vector3f &linear_velocity, float yaw_rate_rads) WARN_IF_UNUSED {
         return false;
     }
-
+    virtual bool set_attitude(const Vector3f &attitude) WARN_IF_UNUSED {
+        return false;
+    }   
     /*
         Sets the target global position with standard guided mode behavior.
     */

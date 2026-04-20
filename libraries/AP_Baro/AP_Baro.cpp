@@ -756,14 +756,14 @@ void AP_Baro::_probe_i2c_barometers(void)
 #if AP_BARO_AUAV_ENABLED
         { PROBE_AUAV, AP_Baro_AUAV::probe, HAL_BARO_AUAV_I2C_ADDR },
 #endif
-
+#if AP_BARO_MS5837_ENABLED
+        { PROBE_MS5837, AP_Baro_MS5837::probe, HAL_BARO_MS5837_I2C_ADDR },
+#endif
 #if APM_BUILD_TYPE(APM_BUILD_ArduSub)
 #if AP_BARO_KELLERLD_ENABLED
         { PROBE_KELLER, AP_Baro_KellerLD::probe, HAL_BARO_KELLERLD_I2C_ADDR },
 #endif
-#if AP_BARO_MS5837_ENABLED
-        { PROBE_MS5837, AP_Baro_MS5837::probe, HAL_BARO_MS5837_I2C_ADDR },
-#endif
+
 #endif  // APM_BUILD_TYPE(APM_BUILD_ArduSub)
     };
 
@@ -817,11 +817,13 @@ void AP_Baro::update(void)
 
     for (uint8_t i=0; i<_num_drivers; i++) {
         drivers[i]->backend_update(i);
+       
     }
-
+    // GCS_SEND_TEXT(MAV_SEVERITY_INFO,",num_sensor=%d",_num_sensors);
     for (uint8_t i=0; i<_num_sensors; i++) {
         if (sensors[i].healthy) {
             // update altitude calculation
+            // GCS_SEND_TEXT(MAV_SEVERITY_INFO,",num=%d,pressure=%f",i,sensors[i].pressure);
             float ground_pressure = sensors[i].ground_pressure;
             if (!is_positive(ground_pressure) || isnan(ground_pressure) || isinf(ground_pressure)) {
                 sensors[i].ground_pressure.set(sensors[i].pressure);

@@ -159,7 +159,16 @@ void Plane::Log_Write_OFG_Guided()
     logger.WriteBlock(&pkt, sizeof(pkt));
 }
 #endif
-
+struct PACKED log_AngAcc{
+    LOG_PACKET_HEADER;
+    uint64_t time_us;
+    float AGAC_x_flt;
+    float AGAC_y_flt;
+    float AGAC_z_flt;
+    float AGAC_x_raw;
+    float AGAC_y_raw;
+    // float AGAC_z_raw;
+};
 struct PACKED log_Nav_Tuning {
     LOG_PACKET_HEADER;
     uint64_t time_us;
@@ -493,7 +502,8 @@ const struct LogStructure Plane::log_structure[] = {
 // @Field: SS: Surface movement / airspeed scaling value
     { LOG_AETR_MSG, sizeof(log_AETR),
       "AETR", "Qfffffff",  "TimeUS,Ail,Elev,Thr,Rudd,Flap,Steer,SS", "s-------", "F-------" , true },
-
+    { LOG_ANGAC_MSG,sizeof(log_AngAcc),
+    "AGAC","Qfffff","TimeUS,AGAC_x_flt,AGAC_y_flt,AGAC_z_flt,AGAC_x_raw,AGAC_y_raw","s-----","F-----", true},
 #if AP_PLANE_OFFBOARD_GUIDED_SLEW_ENABLED
 // @LoggerMessage: OFG
 // @Description: OFfboard-Guided - an advanced version of GUIDED for companion computers that includes rate/s.  
@@ -509,6 +519,10 @@ const struct LogStructure Plane::log_structure[] = {
     { LOG_OFG_MSG, sizeof(log_OFG_Guided),     
       "OFG", "QffffBffB",    "TimeUS,Arsp,ArspA,Alt,AltA,AltF,Hdg,HdgA,AltL", "snnmo-d--", "F--------" , true }, 
 #endif
+
+
+
+
 };
 
 uint8_t Plane::get_num_log_structures() const

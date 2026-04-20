@@ -59,6 +59,7 @@ uint8_t GCS_MAVLINK_Plane::base_mode() const
     case Mode::Number::GUIDED:
     case Mode::Number::CIRCLE:
     case Mode::Number::TAKEOFF:
+    case Mode::Number::NEW_MODE:
 #if MODE_AUTOLAND_ENABLED
     case Mode::Number::AUTOLAND:
 #endif
@@ -1340,6 +1341,7 @@ uint8_t GCS_MAVLINK_Plane::send_available_mode(uint8_t index) const
         &plane.mode_auto,
         &plane.mode_rtl,
         &plane.mode_loiter,
+        &plane.mode_new_mode,
 #if HAL_ADSB_ENABLED
         &plane.mode_avoidADSB,
 #endif

@@ -117,6 +117,8 @@ bool AP_Baro_MS5837::_init()
     if (!AP_Baro_MS56XX::_init()) {
         return false;
     }
+     
+    // GCS_SEND_TEXT(MAV_SEVERITY_INFO,",type=%d",sensors[1].type);
     _frontend.set_type(_instance, AP_Baro::BARO_TYPE_WATER);
     // Use pressure sensitivity as a proxy for range determination
     // High sensitivity for the same number size implies the lower-range sensor variant

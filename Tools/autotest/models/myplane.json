@@ -1,0 +1,56 @@
+# This is an example plane coeffient file used in Ardupilot SITL.
+# This allows ArduPilot developers to change SITL plane aerodynamic properties
+# without having to change the hard-coded source code values directly.
+
+# These coefficients are from last_letter skywalker_2013/aerodynamics.yaml.
+# Thanks to Georacer!
+
+{
+    "s": 0.75,
+    "b": 2.1,
+    "c": 0.3571,
+    "c_lift_0": 0.0867,
+    "c_lift_deltae": 0.2781,
+    "c_lift_a": 4.02,
+    "c_lift_q": 3.87,
+    "mcoeff": 50,
+    "oswald": 0.9935,
+    "alpha_stall": 0.2670,
+    "c_drag_q": 0,
+    "c_drag_deltae": 0.0633,
+    "c_drag_p": 0.1,
+    "c_y_0": 0,
+    "c_y_b": -0.2239,
+    "c_y_p": -0.1374,
+    "c_y_r": 0.0839,
+    "c_y_deltaa": 0.0433,
+    "c_y_deltar": -0.0,
+    "c_l_0": 0,
+    "c_l_p": -0.4042,
+    "c_l_b": -0.0839,
+    "c_l_r": 0.0555,
+    "c_l_deltaa": 0.1202,
+    "c_l_deltar": -0.0,
+    "c_m_0": 0.0180,
+    "c_m_a": -0.2524,
+    "c_m_q": -1.3012,
+    "c_m_deltae": 0.2292,
+    "c_n_0": 0,
+    "c_n_b": 0.0283,
+    "c_n_p": 0.044,
+    "c_n_r": -0.072,
+    "c_n_deltaa": 0.00,
+    "c_n_deltar": 0.1,
+    "deltaa_max": 0.3491,
+    "deltae_max": 0.3491,
+    "deltar_max": 0.3491,
+
+    # The X CoG offset should be -0.02, but that makes the plane too tail heavy
+    # in manual flight. Adjusted to -0.15 gives reasonable flight.
+    # CGOffset is in X,Y,Z.
+    "CGOffset": [
+        -0.0,
+        0.0,
+        -0.0
+    ]
+}
