@@ -71,7 +71,8 @@ public:
 #if MODE_AUTOLAND_ENABLED
         AUTOLAND      = 26,
 #endif
-        NEW_MODE      = 27,  // your new flight mode    
+        NEW_MODE      = 27,  // my flight mode for jet_roll_control
+        JET_AS_TECS_C     = 28,  //jet assist TECS control
     // Mode number 30 reserved for "offboard" for external/lua control.
     };
 
@@ -1111,4 +1112,47 @@ private:
     void stabilize_stick_mixing_direct();
     
     
+};
+
+class ModeJATC : public Mode
+{
+public:
+    ModeJATC(){
+        AP_Param::setup_object_defaults(this, var_info);
+    }
+    Number mode_number() const override { return Number::JET_AS_TECS_C; }
+    const char *name() const override { return "JET_AS_TECS_C"; }
+    const char *name4() const override { return "JATC"; }
+
+    bool allows_terrain_disable() const override { return true; }
+
+    bool does_automatic_thermal_switch() const override { return true; }
+
+    // methods that affect movement of the vehicle in this mode
+    void update() override;
+    
+    bool does_auto_throttle() const override { return true; }
+    
+    bool mode_allows_autotuning() const override { return true; }
+
+    void update_target_altitude() override {};
+    float jet_last_output;
+    float jet_output_real=0.0;
+    float integ_jet2theta=0;
+    float jet2theta_cmd;
+    LowPassFilter2pFloat integ_jet_filter{50,1};
+    AP_Int8 use_auto_jet; 
+    AP_Int16 min_servo_value; 
+    AP_Int16 max_servo_value;
+    AP_Float jet2theta_I;
+    AP_Float jet2theta_P;
+    static const struct AP_Param::GroupInfo var_info[];
+    float update_pitch();
+    
+    float get_jet_output_scaled() const {
+    return jet_output_real*2250;
+    }
+protected:
+
+    bool _enter() override;
 };

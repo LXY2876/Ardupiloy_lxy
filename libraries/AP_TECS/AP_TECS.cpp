@@ -1027,7 +1027,7 @@ void AP_TECS::_update_pitch(void)
     float SEB_error = SEB_dem - SEB_est;
 
     // track demanded height using the specified time constant
-    float SEBdot_dem = _hgt_rate_dem * GRAVITY_MSS * SPE_weighting + SEB_error / timeConstant();
+    SEBdot_dem = _hgt_rate_dem * GRAVITY_MSS * SPE_weighting + SEB_error / timeConstant();
     const float SEBdot_dem_min = - _maxSinkRate * GRAVITY_MSS;
     const float SEBdot_dem_max = _maxClimbRate * GRAVITY_MSS;
     if (SEBdot_dem < SEBdot_dem_min) {
@@ -1339,7 +1339,7 @@ void AP_TECS::update_pitch_throttle(int32_t hgt_dem_cm,
 
     // Calculate pitch demand
     _update_pitch();
-
+    // update_pitch_PID();
     // Calculate throttle demand - use simple pitch to throttle if no
     // airspeed sensor.
     // Note that caller can demand the use of
@@ -1588,4 +1588,65 @@ void AP_TECS::offset_altitude(const float alt_offset)
     // _hgt_dem_in_raw
     // _hgt_dem_in
     // Energies
+}
+
+void AP_TECS::update_pitch_PID(float jet2theta){
+//    const float hgt_error = _hgt_dem - _height;
+
+    hgt_dot_dem = _hgt_rate_dem;
+    hgt_dot_dem = constrain_float(hgt_dot_dem, -_maxSinkRate, _maxClimbRate);
+
+    const float hgtdot_error = hgt_dot_dem - _climb_rate;
+    // const float TAS = MAX(_TAS_state, 1.0f);
+    float gainInv = (_TAS_state * GRAVITY_MSS);
+    float Hgtdot_dem_total=hgt_dot_dem+hgtdot_error*_ptchDamp;
+    float integHgtdot_min = (_TAS_state * (_PITCHminf - radians(5.0f))) - Hgtdot_dem_total;
+    float integHgtdot_max = (_TAS_state * (_PITCHmaxf + radians(5.0f))) - Hgtdot_dem_total;
+    float integHgtrange = integHgtdot_max-integHgtdot_min;
+    float integHgt_delta = constrain_float(hgtdot_error * _get_i_gain() * _DT, -integHgtrange*0.1f, integHgtrange*0.1f);
+
+    float pitch_dem_unc_pid = jet2theta+(Hgtdot_dem_total + _integHgtdot+ integHgt_delta)/_TAS_state+_integKE_pid/gainInv;
+    
+
+    const bool inhibit_integrator =
+        (pitch_dem_unc_pid >= _PITCHmaxf && hgtdot_error > 0.0f) ||
+        (pitch_dem_unc_pid <= _PITCHminf && hgtdot_error < 0.0f);
+    
+    if (!inhibit_integrator) {
+        _integHgtdot += hgtdot_error * _get_i_gain() * _DT;
+        _integKE_pid += (_SKE_est - _SKE_dem) * _SKE_weighting * _DT / timeConstant();
+    }else{
+        const float coef = 1.0f - _DT / (_DT + timeConstant());
+        _integHgtdot *= coef;
+        _integKE_pid *= coef;
+    }
+    _integKE_pid=0;
+    _integHgtdot = constrain_float(_integHgtdot,integHgtdot_min,integHgtdot_max);
+    const float KE_integ_limit = 0.25f * (_PITCHmaxf - _PITCHminf) * gainInv; // allow speed trim integrator to access 505 of pitch range
+    _integKE_pid = constrain_float(_integKE_pid, - KE_integ_limit, KE_integ_limit);
+
+    
+    pitch_dem_unc_pid = jet2theta+(Hgtdot_dem_total + _integHgtdot)/_TAS_state+_integKE_pid/gainInv;
+
+    _pitch_dem_pid = constrain_float(pitch_dem_unc_pid, _PITCHminf, _PITCHmaxf);
+    float ptchRateIncr = _DT * _vertAccLim / _TAS_state;
+    if ((_pitch_dem_pid - _last_pitch_dem_pid) > ptchRateIncr) {
+        _pitch_dem_pid = _last_pitch_dem_pid + ptchRateIncr;
+    } else if ((_pitch_dem_pid - _last_pitch_dem_pid) < -ptchRateIncr) {
+        _pitch_dem_pid = _last_pitch_dem_pid - ptchRateIncr;
+    }
+    
+    
+    _last_pitch_dem_pid = _pitch_dem_pid;
+    AP::logger().Write("HPID", "TimeUS,pdem,hdem,h,dhdem,dh,inke,inhi", "QffffffB",
+                                        AP_HAL::micros64(),
+                                        _pitch_dem_pid,
+                                        _hgt_dem,
+                                        _height,
+                                        hgt_dot_dem,
+                                        _climb_rate,
+                                        _integKE_pid,
+                                        inhibit_integrator
+                                        );
+     
 }

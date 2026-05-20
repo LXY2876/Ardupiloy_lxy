@@ -54,13 +54,15 @@ public:
                                float hgt_afe,
                                float load_factor,
                                float pitch_trim_deg);
-
+    void update_pitch_PID(float jet2theta);
     // demanded throttle in percentage
     // should return -100 to 100, usually positive unless reverse thrust is enabled via _THRminf < 0
     float get_throttle_demand(void) {
         return _throttle_dem * 100.0f;
     }
-
+    int32_t get_pitch_pid_demand(void){
+        return int32_t(_pitch_dem_pid * 5729.5781f);
+    } 
     // demanded pitch angle in centi-degrees
     // should return between -9000 to +9000
     int32_t get_pitch_demand(void) {
@@ -160,7 +162,18 @@ public:
 
     // this supports the TECS_* user settable parameters
     static const struct AP_Param::GroupInfo var_info[];
-
+    float get_SEBdot_dem(void )const{
+        return SEBdot_dem;
+    }
+    float get_TAS_state(void )const{
+        return _TAS_state;
+     }
+    float get_climb_rate(void )const{
+        return _climb_rate;
+     }
+    float get_hgtdot_dem(void)const{
+        return hgt_dot_dem;
+    }
 private:
     // Last time update_50Hz was called
     uint64_t _update_50hz_last_usec;
@@ -233,7 +246,11 @@ private:
 
     // pitch angle demand in radians
     float _pitch_dem;
-
+    float _pitch_dem_pid;
+    float _last_pitch_dem_pid;
+    float _integHgtdot;
+    float _integKE_pid;
+    float hgt_dot_dem;
     // estimated climb rate (m/s)
     float _climb_rate;
 
@@ -398,7 +415,7 @@ private:
     float _SKE_est;
     float _SPEdot;
     float _SKEdot;
-
+    float SEBdot_dem;
     // variables used for precision landing pitch control
     float _hgt_at_start_of_flare;
     float _hgt_rate_at_flare_entry;

@@ -175,6 +175,7 @@ public:
     friend class ModeThermal;
     friend class ModeLoiterAltQLand;
     friend class ModeNewMode;
+    friend class ModeJATC;
 #if MODE_AUTOLAND_ENABLED
     friend class ModeAutoLand;
 #endif
@@ -341,6 +342,7 @@ private:
     ModeThermal mode_thermal;
 #endif
     ModeNewMode mode_new_mode;
+    ModeJATC mode_jatc;
 #if AP_QUICKTUNE_ENABLED
     AP_Quicktune quicktune;
 #endif

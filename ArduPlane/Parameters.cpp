@@ -854,6 +854,9 @@ const AP_Param::Info Plane::var_info[] = {
    // @Group: NEMD_
     // @Path: mode_newmode.cpp
     GOBJECT(mode_new_mode,           "NEMD_",     ModeNewMode),
+    // @Group: JATC_
+    // @Path: mode_jatc.cpp
+    GOBJECT(mode_jatc,           "JATC_",     ModeJATC),
     // @Group: SCHED_
     // @Path: ../libraries/AP_Scheduler/AP_Scheduler.cpp
     GOBJECT(scheduler, "SCHED_", AP_Scheduler),

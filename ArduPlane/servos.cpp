@@ -206,10 +206,17 @@ void Plane::flaperon_update()
       percentage of flaps. Flap input can come from a manual channel
       or from auto flaps.
      */
+    float jet_bias = 0.0f;
+
+    if (control_mode == &mode_jatc) {
+        jet_bias = mode_jatc.get_jet_output_scaled();
+    }
+
     float aileron = SRV_Channels::get_output_scaled(SRV_Channel::k_aileron);
     float flap_percent = SRV_Channels::get_slew_limited_output_scaled(SRV_Channel::k_flap_auto);
-    float flaperon_left  = constrain_float(aileron + flap_percent * 45, -4500, 4500);
-    float flaperon_right = constrain_float(aileron - flap_percent * 45, -4500, 4500);
+    float flaperon_left  = constrain_float(aileron + flap_percent * 45+jet_bias, -4500, 4500);
+    float flaperon_right = constrain_float(aileron - flap_percent * 45-jet_bias, -4500, 4500);
+    // printf("aileron=%f,flap_percent=%f,jet_bias=%f",aileron,flap_percent* 45,jet_bias);
     SRV_Channels::set_output_scaled(SRV_Channel::k_flaperon_left, flaperon_left);
     SRV_Channels::set_output_scaled(SRV_Channel::k_flaperon_right, flaperon_right);
 }
@@ -736,13 +743,14 @@ void Plane::set_servos_flaps(void)
     if (abs(manual_flap_percent) > auto_flap_percent) {
         auto_flap_percent = manual_flap_percent;
     }
-
+    if (plane.control_mode!=&plane.mode_jatc){
+        
     SRV_Channels::set_output_scaled(SRV_Channel::k_flap_auto, auto_flap_percent);
     SRV_Channels::set_output_scaled(SRV_Channel::k_flap, manual_flap_percent);
 
     SRV_Channels::set_slew_rate(SRV_Channel::k_flap_auto, g.flap_slewrate, 100, G_Dt);
     SRV_Channels::set_slew_rate(SRV_Channel::k_flap, g.flap_slewrate, 100, G_Dt);
-
+    }
     // output to flaperons, if any
     flaperon_update();
 }

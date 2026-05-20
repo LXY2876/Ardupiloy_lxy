@@ -140,8 +140,8 @@ void ModeNewMode::update()
     // printf("C_l_delta_a=%f",val);
     pitch_out=SRV_Channels::get_output_norm(SRV_Channel::k_elevator)+sigma*delta_u.y/(0.5*1.225*aspeed_flt*S_wing*0.24);
     yaw_out=SRV_Channels::get_output_norm(SRV_Channel::k_rudder)+sigma*delta_u.z/(0.5*1.225*aspeed_flt*S_wing*b);
-    roll_out_cmd=plane.roll_in_expo(false);
-    SRV_Channels::set_output_scaled(SRV_Channel::k_aileron, roll_out_cmd);
+    // roll_out_cmd=plane.roll_in_expo(false);
+    SRV_Channels::set_output_scaled(SRV_Channel::k_aileron, roll_out_cmd*4500);
     SRV_Channels::set_output_scaled(SRV_Channel::k_elevator, pitch_out*4500);
     SRV_Channels::set_output_scaled(SRV_Channel::k_rudder, yaw_out*4500);
     

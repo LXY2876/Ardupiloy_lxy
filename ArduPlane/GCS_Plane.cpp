@@ -58,6 +58,7 @@ void GCS_Plane::update_vehicle_sensor_status_flags(void)
         }
         break;
     case Mode::Number::NEW_MODE:
+    case Mode::Number::JET_AS_TECS_C:
     case Mode::Number::AUTO:
     case Mode::Number::RTL:
     case Mode::Number::LOITER:

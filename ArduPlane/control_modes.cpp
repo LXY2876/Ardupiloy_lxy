@@ -77,6 +77,9 @@ Mode *Plane::mode_from_mode_num(const enum Mode::Number num)
     case Mode::Number::NEW_MODE:
         ret = &mode_new_mode;
         break;
+    case Mode::Number::JET_AS_TECS_C:
+        ret = &mode_jatc;
+        break;
 #if QAUTOTUNE_ENABLED
     case Mode::Number::QAUTOTUNE:
         ret = &mode_qautotune;

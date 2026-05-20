@@ -121,7 +121,7 @@ const AP_Scheduler::Task Plane::scheduler_tasks[] = {
     SCHED_TASK(update_logging10,        10,    300, 120),
     SCHED_TASK(update_logging25,        25,    300, 123),
 #endif
-    // SCHED_TASK(uart_test, 10, 400, 125),
+    SCHED_TASK(uart_test, 10, 400, 125),
 #if HAL_SOARING_ENABLED
     SCHED_TASK(update_soaring,         50,    400, 126),
 #endif
@@ -150,7 +150,7 @@ const AP_Scheduler::Task Plane::scheduler_tasks[] = {
 #if AP_QUICKTUNE_ENABLED
     SCHED_TASK(update_quicktune, 40, 100, 163),
 #endif
-    // SCHED_TASK(read_angle, 1, 500, 165),
+    SCHED_TASK(read_angle, 5, 500, 165),
 };
 
 void Plane::get_scheduler_tasks(const AP_Scheduler::Task *&tasks,
@@ -179,7 +179,7 @@ void Plane::read_angle(){
         AP::logger().Write("ANGE", "TimeUS,ANGE", "QH",
                                     AP_HAL::micros64(),
                                     now_angle);
-    //     GCS_SEND_TEXT(MAV_SEVERITY_INFO,"begin");
+    
     //     for (int i=0;i<8;i++)
     //         GCS_SEND_TEXT(MAV_SEVERITY_INFO,"now_angle=%x",return_data[i]);
     //     GCS_SEND_TEXT(MAV_SEVERITY_INFO,"end");
@@ -206,10 +206,10 @@ void Plane::uart_test(){
             }
             float range=MAX(g.flap_2_speed-g.flap_1_speed,12);
             if (aspeed<g.flap_1_speed){
-            angle_percent=   1.0*g.flap_1_percent/100*aspeed/g.flap_1_speed;
+            angle_percent = 1.0*g.flap_1_percent/100*aspeed/g.flap_1_speed;
             GCS_SEND_TEXT(MAV_SEVERITY_INFO,"angle_percent=%f,flap_1_speed=%d,airspeed=%f",angle_percent,(uint8_t)g.flap_1_speed,aspeed);
             }else{
-                angle_percent=  1.0*g.flap_1_percent/100*(g.flap_2_speed-aspeed)/range+g.flap_2_percent/100*(aspeed-g.flap_1_speed)/range;
+                angle_percent = 1.0*g.flap_1_percent/100*(g.flap_2_speed-aspeed)/range+g.flap_2_percent/100*(aspeed-g.flap_1_speed)/range;
             }
             angle_percent=constrain_float(angle_percent,0,1);
              
@@ -218,8 +218,8 @@ void Plane::uart_test(){
         }
         // GCS_SEND_TEXT(MAV_SEVERITY_INFO,"channel7=%f",angle_percent);
         uint8_t test_data[] = {0xff, 0xff,0x01,0x07,0x03,0x2A,0x0A,0x00,0x00,0x00,0xC0};
-        uint16_t angle_byte=2048-800*angle_percent;
-        angle_byte=constrain_int16(angle_byte,1248,2048);
+        uint16_t angle_byte=plane.mode_jatc.max_servo_value-(plane.mode_jatc.max_servo_value-plane.mode_jatc.min_servo_value)*angle_percent;
+        angle_byte=constrain_int16(angle_byte,plane.mode_jatc.min_servo_value,plane.mode_jatc.max_servo_value);
         test_data[6]=(angle_byte >> 8) & 0xFF; 
         test_data[7]=angle_byte & 0xFF;
         test_data[10]=~(53+test_data[6]+test_data[7])& 0xFF;
@@ -744,6 +744,8 @@ void Plane::update_alt()
                                                  tecs_hgt_afe(),
                                                  aerodynamic_load_factor,
                                                  g.pitch_trim.get());
+        if (control_mode == &mode_jatc)                                         
+        TECS_controller.update_pitch_PID(mode_jatc.integ_jet2theta);                                         
     }
 }
 
