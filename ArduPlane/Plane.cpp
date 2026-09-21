@@ -150,7 +150,7 @@ const AP_Scheduler::Task Plane::scheduler_tasks[] = {
 #if AP_QUICKTUNE_ENABLED
     SCHED_TASK(update_quicktune, 40, 100, 163),
 #endif
-    SCHED_TASK(read_angle, 5, 500, 165),
+    SCHED_TASK(read_angle, 25, 100, 165),
 };
 
 void Plane::get_scheduler_tasks(const AP_Scheduler::Task *&tasks,
@@ -169,22 +169,73 @@ constexpr int8_t Plane::_failsafe_priorities[6];
 #endif
 
 void Plane::read_angle(){
-    uint8_t test_data[] = {0xff, 0xff,0x01,0x04,0x02, 0x38, 0x02,0xBE};
-    uint8_t return_data[8];
-    hal.serial(5)->write(test_data, sizeof(test_data));
-    if (hal.serial(5)->available()>8){
-        hal.serial(5)->read(return_data, sizeof(return_data));
-
-        uint16_t now_angle= return_data[5]*256+return_data[6];
-        AP::logger().Write("ANGE", "TimeUS,ANGE", "QH",
-                                    AP_HAL::micros64(),
-                                    now_angle);
+    // uint8_t test_data[] = {0xff, 0xff,0x01,0x04,0x02, 0x38, 0x02,0xBE};
+    // uint8_t return_data[8];
+    // hal.serial(5)->write(test_data, sizeof(test_data));
+    // if (hal.serial(5)->available()>8){
+    //     hal.serial(5)->read(return_data, sizeof(return_data));
+    //     uint16_t now_angle= return_data[5]*256+return_data[6];
+    //     AP::logger().Write("ANGE", "TimeUS,ANGE", "QH",
+    //                                 AP_HAL::micros64(),
+    //                                 now_angle);
     
-    //     for (int i=0;i<8;i++)
-    //         GCS_SEND_TEXT(MAV_SEVERITY_INFO,"now_angle=%x",return_data[i]);
-    //     GCS_SEND_TEXT(MAV_SEVERITY_INFO,"end");
-        
-}
+// }
+    // 2. 使用 static 保存状态，保证多次调用时能自动拼接“半包”数据，且不会错位
+    static uint8_t buffer[17];
+    static uint8_t idx = 0;
+    uint32_t nbytes = hal.serial(5)->available();
+    for (uint32_t i = 0; i < nbytes; i++) {
+        uint8_t b = hal.serial(5)->read();
+
+        // 寻找帧头 0xAA
+        if (idx == 0) {
+            if (b == 0xAA) buffer[idx++] = b;
+        } 
+        // 寻找帧头 0x55
+        else if (idx == 1) {
+            if (b == 0x55) {
+                buffer[idx++] = b;
+            } else {
+                idx = 0; // 错位，重置
+                if (b == 0xAA) buffer[idx++] = b; // 防止漏掉紧跟的真帧头 0xAA
+            }
+        } 
+        // 读取 Payload 和 Checksum
+        else {
+            buffer[idx++] = b;
+            
+            // 凑齐 17 字节，开始校验
+            if (idx == 17) {
+                uint8_t sum = 0;
+                // 校验和范围：索引 2 到 15 (共14字节)
+                for (int j = 2; j < 16; j++) {
+                    sum += buffer[j];
+                }
+                
+                if (sum == buffer[16]) {
+                    float aoa, aos, tas;
+                    // 解析浮点数 (注意索引偏移了2，因为前两个是帧头)
+                    memcpy(&aoa, &buffer[2], 4);
+                    memcpy(&aos, &buffer[6], 4);
+                    memcpy(&tas, &buffer[10], 4);
+                    
+                    // 文档要求：空速异常值过滤
+                    if (!(tas >= 0.0f && tas < 200.0f)) {
+                        tas = 0.0f;
+                    }
+                    // 写入 ArduPilot 日志 (建议消息名用 4 个字符如 "ZL40" 或 "AOAS")
+                    AP::logger().Write("ZL40", "TimeUS,AOA,AOS,TAS", "Qfff",
+                                       AP_HAL::micros64(), aoa, aos, tas);
+                    
+                    // 这里你可以把 aoa, aos, tas 赋值给全局变量供飞控使用
+                }
+                
+                // 无论校验成功与否，都必须重置索引，准备接收下一帧
+                idx = 0; 
+            }
+        }
+    }
+ 
 }
 
 void Plane::uart_test(){

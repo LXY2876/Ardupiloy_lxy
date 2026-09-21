@@ -1594,6 +1594,8 @@ void AP_TECS::update_pitch_PID(float jet2theta){
 //    const float hgt_error = _hgt_dem - _height;
 
     hgt_dot_dem = _hgt_rate_dem;
+    // integ_hgt_error+=hgt_error*_DT;
+    // hgt_dot_dem=hgt_dot_dem+0.1*integ_hgt_error;
     hgt_dot_dem = constrain_float(hgt_dot_dem, -_maxSinkRate, _maxClimbRate);
 
     const float hgtdot_error = hgt_dot_dem - _climb_rate;

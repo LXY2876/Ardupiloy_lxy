@@ -15,6 +15,7 @@ const AP_Param::GroupInfo ModeNewMode::var_info[] = {
     AP_GROUPINFO("lms_ctf_frq",    10, ModeNewMode, lms_cutoff_freq,10), 
     AP_GROUPINFO("auto_flap",    11, ModeNewMode, auto_flap,0), 
     AP_GROUPINFO("cutf_freq",    12, ModeNewMode, cutoff_frequency,18), 
+    AP_GROUPINFO("L1_freq",    13, ModeNewMode, L1_frequency,20), 
     AP_GROUPEND
 };
 
@@ -127,17 +128,17 @@ void ModeNewMode::update()
     float roll_out_cmd;
     float delta_roll_out;
     delta_roll_out=Ixx*sigma*delta_u.x/(0.5*1.225*aspeed_flt*S_wing*b);
+    // state_estimate(delta_roll_out, gyro_latest.x, C_l_delta_a*(0.5*1.225*aspeed_flt*S_wing*b)/(Ixx*sigma),ang_acc_flt.x);
     delta_roll_out=constrain_float(delta_roll_out,-max_increment,max_increment);
     roll_out_cmd=roll_out_flt+delta_roll_out;
-    // roll_out_cmd=_roll_output_post_filter.apply(roll_out_cmd);//后置滤波
     roll_out_cmd=constrain_float(roll_out_cmd,-0.9,0.9);//实际输出到执行器的控制指令
     roll_out_real=(1-0.67)*roll_out_cmd+0.67*roll_out_flt;//考虑一阶惯性环节的实际输出
     roll_out_flt=_roll_output_filter.apply(roll_out_real);//考虑执行器与传感器的时间同步
     if (LMS_enable==1){
     val=lms_filter.apply(C_l_delta_a,ang_acc_raw.x,roll_out_real,(0.5*1.225*aspeed_flt*S_wing*b)/(Ixx*sigma));
     C_l_delta_a.set(val);
-    }
-    // printf("C_l_delta_a=%f",val);
+    } 
+ 
     pitch_out=SRV_Channels::get_output_norm(SRV_Channel::k_elevator)+sigma*delta_u.y/(0.5*1.225*aspeed_flt*S_wing*0.24);
     yaw_out=SRV_Channels::get_output_norm(SRV_Channel::k_rudder)+sigma*delta_u.z/(0.5*1.225*aspeed_flt*S_wing*b);
     // roll_out_cmd=plane.roll_in_expo(false);
@@ -180,7 +181,23 @@ float ModeNewMode::update_actuator_dynamics(float cmd_norm){
     return _actuator_state;
 
 }
+void ModeNewMode::state_estimate(float d_u,float x,float Gn,float dot_x){
 
+    float ep=hat_x-x;
+
+
+    float expm=expf(-Kp*AP::scheduler().get_loop_period_s());
+    float Phi=(expm-1)/Kp;
+    float miu=expm*ep;
+    hat_sigma=miu/Phi/Gn;
+    
+    float dot_hat_x=dot_x+Gn*(d_u+hat_sigma)-Kp*ep;//更新状态估计器
+    hat_x+=(dot_hat_x*AP::scheduler().get_loop_period_s());
+    AP::logger().Write("L1", "TimeUS,ep,hsigma", "Qff",
+                                        AP_HAL::micros64(),
+                                        ep,
+                                    hat_sigma);
+}
 void ModeNewMode::log_write_ang_acc(Vector3f vec1,Vector3f vec2){
 
     struct log_AngAcc pkt = {
@@ -200,12 +217,14 @@ bool ModeNewMode::_enter()
 {
     _gyro_prev = ahrs.get_gyro_latest();
     roll_out_real = SRV_Channels::get_output_norm(SRV_Channel::k_aileron);
-    
-    ARSP_filter.set_cutoff_frequency(50,cutoff_frequency);
-    _roll_output_filter.set_cutoff_frequency(50,cutoff_frequency);
-    _ang_acc_filter.set_cutoff_frequency(50,cutoff_frequency);
-    lms_filter.acc_x_filter.set_cutoff_frequency(50,lms_cutoff_freq);
-    lms_filter.output_filter.set_cutoff_frequency(50,lms_cutoff_freq);
+    float loop_rate=AP::scheduler().get_loop_rate_hz();
+ 
+    ARSP_filter.set_cutoff_frequency(loop_rate,cutoff_frequency);
+    _roll_output_filter.set_cutoff_frequency(loop_rate,cutoff_frequency);
+    _ang_acc_filter.set_cutoff_frequency(loop_rate,cutoff_frequency);
+    lms_filter.acc_x_filter.set_cutoff_frequency(loop_rate,lms_cutoff_freq);
+    lms_filter.output_filter.set_cutoff_frequency(loop_rate,lms_cutoff_freq);
+    L1_filter.set_cutoff_frequency(loop_rate,L1_frequency);
     roll_out_flt = roll_out_real;
     delta_u.zero();
     output.zero();

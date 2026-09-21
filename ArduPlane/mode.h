@@ -1084,15 +1084,15 @@ public:
     AP_Float lms_cutoff_freq;
     AP_Int8 auto_flap;
     AP_Float cutoff_frequency;
+    AP_Float L1_frequency;
     Vector3f output;
     Vector3f output1;
     LMS lms_filter;
-    LowPassFilter2pFloat _roll_output_filter{50,18};
-    LowPassFilter2pVector3f _ang_acc_filter{50,18};
+    LowPassFilter2pFloat _roll_output_filter{100,30};
+    LowPassFilter2pVector3f _ang_acc_filter{100,30};
     
-    LowPassFilter2pFloat ARSP_filter{50,18};
-    LowPassFilter2pFloat _roll_output_post_filter{50,23};
-  
+    LowPassFilter2pFloat ARSP_filter{100,30};
+    LowPassFilter2pFloat L1_filter{100,30};
     void log_write_ang_acc(Vector3f vec1,Vector3f vec2);    
     static const struct AP_Param::GroupInfo var_info[];
 protected:
@@ -1100,14 +1100,19 @@ protected:
 private:
     float val=0;
     float _phi_feedback=0;
-    float _actuator_alpha=0.67;
+    float _actuator_alpha=0.9;
     float _actuator_state=0.0;
     uint8_t _delay_samples=2;        // 延迟对应的采样点数（离散化）
     float _cmd_buffer[1]={0};
     float _real_buffer[1]={0};
     uint8_t _buf_cmd_idx=0;                            // 写指针
     uint8_t _buf_real_idx=0;                             // 读指针
+    uint8_t Kp=100;
+    float hat_sigma=0;  //残差的估计值
+    float hat_x;
+    float delta_u_ad=0;
     float update_actuator_dynamics(float cmd_norm);
+    void state_estimate(float d_u,float x,float Gn,float dot_x);//状态观测器
     // float get_delayed_value(float cmd_current);
     void stabilize_stick_mixing_direct();
     
@@ -1148,7 +1153,7 @@ public:
     AP_Float jet2theta_P;
     static const struct AP_Param::GroupInfo var_info[];
     float update_pitch();
-    
+     
     float get_jet_output_scaled() const {
     return jet_output_real*2250;
     }

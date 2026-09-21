@@ -251,6 +251,7 @@ private:
     float _integHgtdot;
     float _integKE_pid;
     float hgt_dot_dem;
+    float integ_hgt_error;
     // estimated climb rate (m/s)
     float _climb_rate;
 

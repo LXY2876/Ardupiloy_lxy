@@ -19,7 +19,7 @@ float LMS::apply(float G,float v, float u_flt,float K_flt){
         if (fabsf(error) > 0.05f && fabsf(delta_u) > 0.01f) {
             
         Gain = Gain - mu_normalized * error * last_K_flt*delta_u;
-        // printf("Gain=%f",Gain);
+        printf("Gain=%f",Gain);
         Gain=constrain_float(Gain,GAIN_MIN,GAIN_MAX);
         }
         last_v=v;
