@@ -121,7 +121,7 @@ const AP_Scheduler::Task Plane::scheduler_tasks[] = {
     SCHED_TASK(update_logging10,        10,    300, 120),
     SCHED_TASK(update_logging25,        25,    300, 123),
 #endif
-    SCHED_TASK(uart_test, 10, 400, 125),
+    SCHED_TASK(uart_test, 10, 100, 125),
 #if HAL_SOARING_ENABLED
     SCHED_TASK(update_soaring,         50,    400, 126),
 #endif
@@ -150,7 +150,7 @@ const AP_Scheduler::Task Plane::scheduler_tasks[] = {
 #if AP_QUICKTUNE_ENABLED
     SCHED_TASK(update_quicktune, 40, 100, 163),
 #endif
-    SCHED_TASK(read_angle, 25, 100, 165),
+    // SCHED_TASK(read_angle, 25, 100, 165),
 };
 
 void Plane::get_scheduler_tasks(const AP_Scheduler::Task *&tasks,
@@ -173,7 +173,7 @@ void Plane::read_angle(){
     // uint8_t return_data[8];
     // hal.serial(5)->write(test_data, sizeof(test_data));
     // if (hal.serial(5)->available()>8){
-    //     hal.serial(5)->read(return_data, sizeof(return_data));
+        // hal.serial(5)->read(return_data, sizeof(return_data));
     //     uint16_t now_angle= return_data[5]*256+return_data[6];
     //     AP::logger().Write("ANGE", "TimeUS,ANGE", "QH",
     //                                 AP_HAL::micros64(),
@@ -249,24 +249,13 @@ void Plane::uart_test(){
         uart_initialized = true;
     }
     if (channel_flap != nullptr && rc().has_valid_input()) {
-        if (plane.mode_new_mode.auto_flap==1){
-            float aspeed;
-            if(!ahrs.airspeed_estimate(aspeed)){
-                 aspeed=plane.airspeed.get_airspeed();
-                //  GCS_SEND_TEXT(MAV_SEVERITY_INFO,"aspeed=%f",aspeed);   
-            }
-            float range=MAX(g.flap_2_speed-g.flap_1_speed,12);
-            if (aspeed<g.flap_1_speed){
-            angle_percent = 1.0*g.flap_1_percent/100*aspeed/g.flap_1_speed;
-            GCS_SEND_TEXT(MAV_SEVERITY_INFO,"angle_percent=%f,flap_1_speed=%d,airspeed=%f",angle_percent,(uint8_t)g.flap_1_speed,aspeed);
-            }else{
-                angle_percent = 1.0*g.flap_1_percent/100*(g.flap_2_speed-aspeed)/range+g.flap_2_percent/100*(aspeed-g.flap_1_speed)/range;
-            }
-            angle_percent=constrain_float(angle_percent,0,1);
-             
-        }else{
-            angle_percent= rc().channel(6)->norm_input();
-        }
+
+        angle_percent= rc().channel(5)->norm_input();
+
+        #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+        SRV_Channels::set_output_scaled(SRV_Channel::k_motor_tilt, (angle_percent+1)/2*1000);
+        
+        #elif CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
         // GCS_SEND_TEXT(MAV_SEVERITY_INFO,"channel7=%f",angle_percent);
         uint8_t test_data[] = {0xff, 0xff,0x01,0x07,0x03,0x2A,0x0A,0x00,0x00,0x00,0xC0};
         uint16_t angle_byte=plane.mode_jatc.max_servo_value-(plane.mode_jatc.max_servo_value-plane.mode_jatc.min_servo_value)*angle_percent;
@@ -275,6 +264,7 @@ void Plane::uart_test(){
         test_data[7]=angle_byte & 0xFF;
         test_data[10]=~(53+test_data[6]+test_data[7])& 0xFF;
         hal.serial(5)->write(test_data, sizeof(test_data));
+         #endif
     }
 }
     //以下为GPIO功能测试代码
@@ -795,8 +785,7 @@ void Plane::update_alt()
                                                  tecs_hgt_afe(),
                                                  aerodynamic_load_factor,
                                                  g.pitch_trim.get());
-        if (control_mode == &mode_jatc)                                         
-        TECS_controller.update_pitch_PID(mode_jatc.integ_jet2theta);                                         
+                                      
     }
 }
 

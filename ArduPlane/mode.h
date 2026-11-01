@@ -1064,7 +1064,6 @@ public:
 
     Vector3f _gyro_prev;
     Vector3f delta_u;
-    // Vector3f rate_gain{7.0,7.0,7.0};
     AP_Float angle_P_gain;
     AP_Int8 LMS_enable;
     AP_Float rate_gain;
@@ -1072,8 +1071,6 @@ public:
     AP_Float Ixx;
     float Iyy=1.0f;
     float Izz=1.0f;
-    // float roll_out_cmd=0.0;
-    // float delta_roll_out=0.0;
     float roll_out_real=0.0;
     float roll_out_flt=0.0;
     float roll_out_flt_last=0.0;
@@ -1128,36 +1125,104 @@ public:
     Number mode_number() const override { return Number::JET_AS_TECS_C; }
     const char *name() const override { return "JET_AS_TECS_C"; }
     const char *name4() const override { return "JATC"; }
-
-    bool allows_terrain_disable() const override { return true; }
-
-    bool does_automatic_thermal_switch() const override { return true; }
-
-    // methods that affect movement of the vehicle in this mode
     void update() override;
-    
-    bool does_auto_throttle() const override { return true; }
-    
-    bool mode_allows_autotuning() const override { return true; }
+    void run() override;
+ 
+    bool longitudinal_update(Vector3f delta_v,float aspeed);
+ 
+    void lateral_update(Vector2f delta_v,float aspeed);
+    void setup_actuator();
+    bool test_qpoases();
+    // bool does_automatic_thermal_switch() const override { return true; }
 
-    void update_target_altitude() override {};
-    float jet_last_output;
-    float jet_output_real=0.0;
-    float integ_jet2theta=0;
-    float jet2theta_cmd;
-    LowPassFilter2pFloat integ_jet_filter{50,1};
-    AP_Int8 use_auto_jet; 
-    AP_Int16 min_servo_value; 
-    AP_Int16 max_servo_value;
-    AP_Float jet2theta_I;
-    AP_Float jet2theta_P;
+    float target_u;
+    float target_w;
+    Vector3f _gyro_prev;
+    Vector3f vel_accel_body;
+    Vector3f delta_ang_acc;
+    AP_Float angle_P_gain;
+ 
+    AP_Float rate_gain;
+    AP_Float C_l_delta_a;
+    AP_Float C_m_delta_e;
+ 
+    float min_servo_value=1200;
+    float max_servo_value=2100;
+    float Ixx=0.0604f;
+    float Iyy=0.0805f;
+    float Ixz=0.0026f;
+    float Izz=0.0140f;
+    float roll_out_real=0.0;
+    float roll_out_flt=0.0;
+    float roll_out_flt_last=0.0;
+    const float mass=2.2;
+    const float h1=0.05;
+    const float h2=0.40;
+    const float L=0.2;
+    float front_diff;
+    float front_tot;
+    const float CL_alpha=4.2;
+    template<typename VectorType>
+    struct ActuatorState {
+        VectorType cmd{};
+        VectorType state{};
+        VectorType state_flt{};
+        float alpha;
+        VectorType min;
+        VectorType max;
+        VectorType max_increment;
+
+        ActuatorState(const VectorType &lower,
+                    const VectorType &upper,
+                    const VectorType &step)
+            : min(lower), max(upper), max_increment(step)
+        {}
+    };
+    ActuatorState<Vector3f> motor_actuator{
+    {0.0f, 0.0f, 0.0f},
+    {1.0f, 1.0f, 1.0f},
+    {0.05f, 0.05f, 0.05f}
+    };
+
+    ActuatorState<Vector2f> servo_actuator{
+        {0.0f, 0.0f},
+        {2.0f/3.0f * 3.14159265f, 0.0f},
+        { 0.02f,  0.02f}
+    };
+
+    ActuatorState<Vector2f> control_surface_actuator{
+        {-1.0f, -1.0f},
+        {1.0f, 1.0f},
+        { 0.05f,  0.05f}
+    };
+
+    AP_Float S_wing;
+    AP_Float b;
+    AP_Float sigma;
+    AP_Float max_increment;
+    AP_Int8 auto_flap;
+    AP_Float cutoff_frequency;
+    AP_Float L1_frequency;
+    
+    LowPassFilter2pVector3f _ang_acc_filter{100,30};
+    LowPassFilter2pVector3f _vel_acc_filter{100,30};
+    LowPassFilter2pVector3f motor_filter{100,30};
+    LowPassFilter2pVector2f servo_filter{100,30};
+    LowPassFilter2pVector2f control_surface_filter{100,30};
+    LowPassFilter2pFloat ARSP_filter{100,30};
+    LowPassFilter2pFloat L1_filter{100,30};
     static const struct AP_Param::GroupInfo var_info[];
-    float update_pitch();
-     
-    float get_jet_output_scaled() const {
-    return jet_output_real*2250;
-    }
 protected:
-
+    #if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+    bool  poll_servo_position(uint16_t &raw_position);
+    uint8_t servo_rx[8]{};
+    uint8_t servo_rx_count = 0;
+    uint32_t servo_request_ms = 0;
+    uint32_t servo_last_good_ms = 0;
+    bool servo_waiting = false;
+    #endif
+    Vector3f hat_x,hat_sigma; 
+    void state_estimate(float d_u,float x,float Gn,float dot_x );
+    void actuator_dynamic_update();
     bool _enter() override;
 };
